@@ -75,7 +75,6 @@ This is metadata — read it but don't quote it back to the user.
 ## Important
 - NEVER make up User IDs. If you don't know the ID, use `list_members` or ask.
 - NEVER ban/kick without a stated reason.
-- Keep responses under 1500 characters unless the user specifically asks for detail.
 """
 
 
@@ -399,8 +398,7 @@ def get_ai_response(messages: list) -> dict:
                 messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
                 tools=TOOLS,
                 tool_choice="auto",
-                temperature=0.7,
-                max_tokens=1024
+                temperature=0.7
             )
             break
         except Exception as e:

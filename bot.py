@@ -27,7 +27,6 @@ bot = discord.Client(intents=intents)
 
 # Per-channel conversation history { channel_id: [messages] }
 history: dict[str, list] = {}
-MAX_HISTORY = 20
 
 
 # ─── Help Embed ────────────────────────────────────────────────────────────────
@@ -179,10 +178,6 @@ async def on_message(message: discord.Message):
         history[channel_id] = history.pop(channel_id)
 
     history[channel_id].append({"role": "user", "content": full_user_message})
-
-    # Keep last MAX_HISTORY turns
-    if len(history[channel_id]) > MAX_HISTORY:
-        history[channel_id] = history[channel_id][-MAX_HISTORY:]
 
     async with message.channel.typing():
         try:
