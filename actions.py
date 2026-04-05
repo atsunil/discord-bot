@@ -23,7 +23,7 @@ def sanitize_input(text: str, is_admin: bool = False) -> str:
     return text
 
 
-async def execute_action(tool_name: str, args: dict, guild: discord.Guild, is_admin: bool = False) -> str:
+async def execute_action(tool_name: str, args: dict, guild: discord.Guild, is_admin: bool = False, bot: discord.Client = None) -> str:
     """Execute a Discord server action. Returns a result string."""
     logger.info(f"Executing action: {tool_name} | Args: {args}")
     try:
@@ -214,6 +214,43 @@ async def execute_action(tool_name: str, args: dict, guild: discord.Guild, is_ad
                 return f"✅ User ID **{args['user_id']}** has been unbanned."
             except discord.NotFound:
                 return f"❌ User ID `{args['user_id']}` is not banned or invalid."
+
+        # ── Bot Presence ──────────────────────────────────────────────────
+        elif tool_name == "set_bot_presence":
+            if not bot:
+                return "❌ Bot instance not provided for action."
+            activity_type_str = args.get("activity_type", "playing").lower()
+            name = args.get("name", "with my AI brain")
+            state = args.get("state", None)
+
+            act_type = discord.ActivityType.playing
+            if activity_type_str == "watching":
+                act_type = discord.ActivityType.watching
+            elif activity_type_str == "listening":
+                act_type = discord.ActivityType.listening
+            elif activity_type_str == "streaming":
+                act_type = discord.ActivityType.streaming
+            elif activity_type_str == "custom":
+                act_type = discord.ActivityType.custom
+
+            activity = discord.Activity(
+                type=act_type,
+                name=name,
+                state=state
+            )
+            
+            if act_type == discord.ActivityType.streaming:
+                activity = discord.Streaming(name=name, url="https://twitch.tv/discord")
+
+            await bot.change_presence(activity=activity)
+            
+            icon = "🎮"
+            if activity_type_str == "watching": icon = "📺"
+            elif activity_type_str == "listening": icon = "🎧"
+            elif activity_type_str == "streaming": icon = "📡"
+            elif activity_type_str == "custom": icon = "✨"
+            
+            return f"✅ {icon} Changed my presence to: **{activity_type_str.capitalize()}** {name}" + (f" ({state})" if state else "")
 
         else:
             return f"❌ Unknown action: `{tool_name}`"

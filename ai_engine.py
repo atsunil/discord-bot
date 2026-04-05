@@ -58,6 +58,7 @@ You can have natural conversations with users AND manage the server using tools.
 | 👥 Members      | List members to help find User IDs                   |
 | 📨 Direct Msgs  | Send DMs to users (`send_dm` tool)                   |
 | ℹ️ Server Info  | Show server stats (`server_info` tool)               |
+| 🎮 Bot Presence | Change your own bot status/activity (`set_bot_presence`) |
 
 ## Permission Rules — FOLLOW STRICTLY
 Each message has a header with the user's role tag:
@@ -430,6 +431,32 @@ TOOLS = [
                     }
                 },
                 "required": ["user_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_bot_presence",
+            "description": "Change the bot's own Discord presence/status (e.g. Playing, Watching, Custom Status).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "activity_type": {
+                        "type": "string",
+                        "enum": ["playing", "watching", "listening", "streaming", "custom"],
+                        "description": "The type of activity."
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The main text of the activity (e.g., 'a game' for Playing, or the custom status text if custom)."
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "Optional sub-state or details."
+                    }
+                },
+                "required": ["activity_type", "name"]
             }
         }
     }

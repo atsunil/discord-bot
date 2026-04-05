@@ -131,7 +131,7 @@ async def on_interactive_selection(
                 for tc in ai_result["tool_calls"]:
                     if guild:
                         result = await execute_action(
-                            tc["name"], tc["arguments"], guild, is_admin=is_admin
+                            tc["name"], tc["arguments"], guild, is_admin=is_admin, bot=bot
                         )
                     else:
                         result = "❌ Server actions unavailable in DMs."
@@ -404,7 +404,7 @@ async def on_message(message: discord.Message):
                 for tc in ai_result["tool_calls"]:
                     if guild:
                         result = await execute_action(
-                            tc["name"], tc["arguments"], guild, is_admin=is_admin
+                            tc["name"], tc["arguments"], guild, is_admin=is_admin, bot=bot
                         )
                     else:
                         result = "❌ Server actions unavailable in DMs."
