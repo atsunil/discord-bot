@@ -115,10 +115,10 @@ so users can click buttons instead of typing. Place these on their OWN line at t
 - Keep responses under 1500 characters unless the user specifically asks for detail.
 
 ## Multiple Tool Calls — CRITICAL
-When a task requires MULTIPLE actions (e.g. "create 3 channels", "set up a category with channels"), you MUST call the tool MULTIPLE TIMES in a SINGLE response — one call per channel/action. Do NOT call just once and describe the rest in text. For example:
-- "Create channels #general, #memes, #help in Fun category" → call `create_channel` THREE times, once for each channel, all in the same response.
+When a task requires MULTIPLE actions (e.g. "create 3 channels", "set up a category with channels"), you MUST include ALL items in a single tool call. For example:
+- "Create channels #general, #memes, #help in Fun category" → call `create_channels` ONCE with all 3 channels in the `channels` array.
 - "Kick user A and user B" → call `kick_member` TWICE.
-Always complete ALL requested actions in one response using parallel tool calls.
+Always complete ALL requested actions in one response.
 """
 
 

@@ -1,7 +1,7 @@
 """
 bot.py — Discord AI Bot (Main Entry Point)
 NVIDIA NIM API + Discord.py with Interactive Button/Select/Poll UI
-SQLite-backed conversation history + per-server configuration
+Supabase-backed conversation history + per-server configuration
 """
 
 import discord
@@ -14,7 +14,7 @@ from aiohttp import web
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-from ai_engine import get_ai_response, get_ai_response_stream
+from ai_engine import get_ai_response
 from actions import execute_action
 from interactive import parse_interactive_blocks
 from database import (
@@ -29,13 +29,16 @@ import status as status_module
 load_dotenv()
 
 # ─── Logging Setup ─────────────────────────────────────────────────────────────
+log_handlers = [logging.StreamHandler()]
+try:
+    log_handlers.append(logging.FileHandler("moloj.log", encoding="utf-8"))
+except OSError:
+    pass  # Read-only filesystem (Docker/HuggingFace)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("moloj.log", encoding="utf-8"),
-    ],
+    handlers=log_handlers,
 )
 logger = logging.getLogger(__name__)
 
