@@ -1,0 +1,149 @@
+2026-04-05 12:07:44,859 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-04-05 12:07:44,859 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-04-05 12:07:44,862 [INFO] discord.client: logging in using static token
+2026-04-05 12:07:47,237 [INFO] discord.gateway: Shard ID None has connected to Gateway (Session ID: 1fb9bc91508b47e6b3b0f2af73dafd8b).
+2026-04-05 12:07:49,613 [INFO] database: Database initialized
+2026-04-05 12:07:49,615 [INFO] database: Pruned conversation history older than 7 days
+2026-04-05 12:07:50,179 [INFO] __main__: Slash commands synced for 5 server(s)
+2026-04-05 12:07:50,180 [INFO] __main__: ✅ Moloj is online as Moloj_Oriya#9286
+2026-04-05 12:07:50,180 [INFO] __main__:    Connected to 5 server(s)
+2026-04-05 12:26:31,955 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:26:31,986 [INFO] interactive: Parsed BUTTONS block with 5 options
+2026-04-05 12:26:40,025 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:26:40,026 [INFO] actions: Executing action: server_info | Args: {}
+2026-04-05 12:27:09,342 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:27:09,357 [INFO] interactive: Parsed BUTTONS block with 5 options
+2026-04-05 12:27:51,352 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:27:51,353 [INFO] actions: Executing action: list_members | Args: {'limit': 25}
+2026-04-05 12:28:42,123 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:28:42,163 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 12:29:26,641 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:29:26,659 [INFO] interactive: Parsed BUTTONS block with 5 options
+2026-04-05 12:29:55,791 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:30:46,023 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:30:46,049 [INFO] interactive: Parsed BUTTONS block with 3 options
+2026-04-05 12:31:05,419 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:31:05,434 [INFO] interactive: Parsed BUTTONS block with 3 options
+2026-04-05 12:31:21,595 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:32:27,282 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:32:27,301 [INFO] actions: Executing action: send_dm | Args: {'user_id': '1014195259976196126', 'message': "**Hello!** :wave:\nWelcome to your first quick English lesson. Here are a few basics to get you started:\n\n1️⃣ **Greetings**\n- *Hello* / *Hi* – informal\n- *Good morning* / *Good afternoon* / *Good evening* – time‑specific\n- *How are you?* – polite way to ask about someone's well‑being\n\n2️⃣ **Common Phrases**\n- *Thank you* – show appreciation\n- *Please* – polite request\n- *Excuse me* – get attention or apologize for a small mistake\n\n3️⃣ **Simple Question & Answer**\n- *What is your name?* → *My name is …*\n- *Where are you from?* → *I am from …*\n- *Do you speak English?* → *Yes, a little.* / *No, I am learning.*\n\n💡 **Tip:** Practice by introducing yourself in English to a friend or writing a short paragraph about your day.\n\nFeel free to ask me any questions or let me know what topics you’d like to explore next! :smile:", 'metadata': {}}
+2026-04-05 12:33:48,116 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:33:48,131 [INFO] interactive: Parsed BUTTONS block with 5 options
+2026-04-05 12:34:26,688 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:34:26,715 [INFO] interactive: Parsed CONFIRM block: Create “Learning Hub” category with #english‑practice, #ai‑ml‑resources, #book‑club
+2026-04-05 12:34:35,982 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:34:35,983 [INFO] actions: Executing action: create_channel | Args: {'channel_name': 'english-practice', 'channel_type': 'text', 'category_name': 'Learning Hub', 'topic': 'Casual English chat, corrections, language games.'}
+2026-04-05 12:35:00,079 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:35:00,105 [INFO] interactive: Parsed CONFIRM block: Create “Learning Hub” category with a placeholder channel #info
+2026-04-05 12:35:07,819 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:35:07,821 [INFO] actions: Executing action: create_channel | Args: {'channel_name': 'info', 'channel_type': 'text', 'category_name': 'Learning Hub', 'topic': 'Welcome to the Learning Hub! Add more channels as needed.'}
+2026-04-05 12:36:24,859 [INFO] __main__: SIGTERM received
+2026-04-05 12:36:24,859 [INFO] __main__: Shutting down Moloj gracefully...
+2026-04-05 12:36:39,078 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-04-05 12:36:39,078 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-04-05 12:36:39,080 [INFO] discord.client: logging in using static token
+2026-04-05 12:36:43,477 [INFO] discord.gateway: Shard ID None has connected to Gateway (Session ID: dd35876dc32002f8451f98218cebaa95).
+2026-04-05 12:36:45,888 [INFO] database: Database initialized
+2026-04-05 12:36:45,889 [INFO] database: Pruned conversation history older than 7 days
+2026-04-05 12:36:46,704 [INFO] __main__: Slash commands synced for 5 server(s)
+2026-04-05 12:36:46,704 [INFO] __main__: ✅ Moloj is online as Moloj_Oriya#9286
+2026-04-05 12:36:46,705 [INFO] __main__:    Connected to 5 server(s)
+2026-04-05 12:37:02,048 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:37:02,077 [INFO] interactive: Parsed CONFIRM block: Create “Learning Hub” category and add #english‑practice, #ai‑ml‑resources, #book‑club
+2026-04-05 12:37:12,555 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:37:12,573 [INFO] interactive: Parsed BUTTONS block with 2 options
+2026-04-05 12:37:21,836 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:37:21,837 [INFO] actions: Executing action: create_channel | Args: {'channel_name': 'english-practice', 'channel_type': 'text', 'topic': 'Casual English chat, practice, corrections, language games.'}
+2026-04-05 12:37:57,857 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:37:57,864 [INFO] interactive: Parsed BUTTONS block with 5 options
+2026-04-05 12:38:39,288 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:38:39,289 [INFO] actions: Executing action: create_channel | Args: {'channel_name': 'gaming-lobby', 'channel_type': 'text', 'category_name': 'Gaming Zone', 'topic': 'General chat for gaming discussions, game nights, and coordination.'}
+2026-04-05 12:38:39,805 [INFO] actions: Auto-created category: Gaming Zone
+2026-04-05 12:40:49,581 [INFO] __main__: SIGTERM received
+2026-04-05 12:40:49,582 [INFO] __main__: Shutting down Moloj gracefully...
+2026-04-05 12:41:03,030 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-04-05 12:41:03,030 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-04-05 12:41:03,032 [INFO] discord.client: logging in using static token
+2026-04-05 12:41:05,917 [INFO] discord.gateway: Shard ID None has connected to Gateway (Session ID: f60258ea91341669384e024c71be93be).
+2026-04-05 12:41:08,440 [INFO] database: Database initialized
+2026-04-05 12:41:08,442 [INFO] database: Pruned conversation history older than 7 days
+2026-04-05 12:41:09,328 [INFO] __main__: Slash commands synced for 5 server(s)
+2026-04-05 12:41:09,329 [INFO] __main__: ✅ Moloj is online as Moloj_Oriya#9286
+2026-04-05 12:41:09,329 [INFO] __main__:    Connected to 5 server(s)
+2026-04-05 12:41:16,058 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:41:16,087 [INFO] interactive: Parsed BUTTONS block with 5 options
+2026-04-05 12:41:37,853 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:41:37,856 [INFO] actions: Executing action: create_channel | Args: {'channel_name': 'general-chat', 'channel_type': 'text', 'category_name': 'Community Hub', 'topic': 'Welcome to the Community Hub! General chat and introductions.'}
+2026-04-05 12:41:38,357 [INFO] actions: Auto-created category: Community Hub
+2026-04-05 12:43:03,009 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:43:18,765 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:45:54,416 [INFO] discord.gateway: Shard ID None has successfully RESUMED session f60258ea91341669384e024c71be93be.
+2026-04-05 12:45:56,440 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:45:57,342 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:47:11,696 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:47:11,718 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 12:47:59,529 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:50:09,345 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:50:09,346 [INFO] actions: Executing action: create_channel | Args: {'channel_name': 'announcements', 'channel_type': 'text', 'category_name': 'Project Alpha', 'topic': 'Official updates and news for Project Alpha.'}
+2026-04-05 12:50:09,884 [INFO] actions: Auto-created category: Project Alpha
+2026-04-05 12:51:56,865 [INFO] __main__: SIGTERM received
+2026-04-05 12:51:56,865 [INFO] __main__: Shutting down Moloj gracefully...
+2026-04-05 12:52:06,935 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-04-05 12:52:06,936 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-04-05 12:52:06,937 [INFO] discord.client: logging in using static token
+2026-04-05 12:52:09,372 [INFO] discord.gateway: Shard ID None has connected to Gateway (Session ID: 19fd9dd42a5611f3f48b1aa93fff0c5d).
+2026-04-05 12:52:11,782 [INFO] database: Database initialized
+2026-04-05 12:52:11,783 [INFO] database: Pruned conversation history older than 7 days
+2026-04-05 12:52:12,309 [INFO] __main__: Slash commands synced for 5 server(s)
+2026-04-05 12:52:12,309 [INFO] __main__: ✅ Moloj is online as Moloj_Oriya#9286
+2026-04-05 12:52:12,309 [INFO] __main__:    Connected to 5 server(s)
+2026-04-05 12:52:33,410 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:52:33,444 [INFO] interactive: Parsed BUTTONS block with 3 options
+2026-04-05 12:52:33,966 [INFO] discord.gateway: Shard ID None has successfully RESUMED session 19fd9dd42a5611f3f48b1aa93fff0c5d.
+2026-04-05 12:52:47,445 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:52:47,446 [INFO] actions: Executing action: create_channels | Args: {'channels': [{'channel_name': 'announcements', 'channel_type': 'text', 'category_name': 'Project Alpha', 'topic': 'Official updates for Project Alpha'}, {'channel_name': 'discussion', 'channel_type': 'text', 'category_name': 'Project Alpha', 'topic': 'General discussion about Project Alpha'}, {'channel_name': 'resources', 'channel_type': 'text', 'category_name': 'Project Alpha', 'topic': 'Links, docs, and assets for Project Alpha'}]}
+2026-04-05 12:52:47,447 [INFO] discord.gateway: Shard ID None has successfully RESUMED session 19fd9dd42a5611f3f48b1aa93fff0c5d.
+2026-04-05 12:52:47,958 [INFO] actions: Auto-created category: Project Alpha
+2026-04-05 12:53:28,935 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:53:28,936 [INFO] actions: Executing action: list_members | Args: {'limit': 25}
+2026-04-05 12:54:20,234 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:55:08,696 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:56:14,316 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:59:29,848 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 12:59:52,224 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:00:03,085 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:00:03,112 [INFO] interactive: Parsed BUTTONS block with 3 options
+2026-04-05 13:00:13,386 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:00:13,401 [INFO] interactive: Parsed BUTTONS block with 3 options
+2026-04-05 13:00:38,165 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:01:11,889 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:05:21,989 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:05:21,990 [INFO] actions: Executing action: send_dm | Args: {'user_id': '1368867971258126377', 'message': "🧠 **GK Challenge!**\n\nYour question: **What is the capital city of Canada?**\nReply here with your answer when you're ready."}
+2026-04-05 13:05:47,726 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:05:47,753 [INFO] interactive: Parsed BUTTONS block with 3 options
+2026-04-05 13:08:42,998 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:08:43,028 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:08:53,970 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:08:53,988 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:24,927 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:24,952 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:30,743 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:30,770 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:35,652 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:35,682 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:40,490 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:40,506 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:45,052 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:45,067 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:48,981 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:49,007 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:52,800 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:52,817 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:09:56,800 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:09:56,825 [INFO] interactive: Parsed BUTTONS block with 4 options
+2026-04-05 13:10:00,644 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:10:00,692 [INFO] interactive: Parsed BUTTONS block with 2 options
+2026-04-05 13:10:05,800 [INFO] httpx: HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-05 13:15:45,427 [WARNING] discord.gateway: Can't keep up, shard ID None websocket is 18.6s behind.
+2026-04-05 14:05:31,473 [INFO] __main__: SIGTERM received
+2026-04-05 14:05:31,474 [INFO] __main__: Shutting down Moloj gracefully...

@@ -1,22 +1,47 @@
 """
 bot.py — Discord AI Bot (Main Entry Point)
-NVIDIA NIM API + Discord.py
+NVIDIA NIM API + Discord.py with Interactive Button/Select/Poll UI
+SQLite-backed conversation history + per-server configuration
 """
 
 import discord
+from discord import app_commands
 import os
+import signal
+import asyncio
 import logging
+from aiohttp import web
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-from ai_engine import get_ai_response
+
+from ai_engine import get_ai_response, get_ai_response_stream
 from actions import execute_action
+from interactive import parse_interactive_blocks
+from database import (
+    init_db, save_message, get_history,
+    clear_history, prune_old_history,
+    get_server_config, update_server_config,
+)
+from slash_commands import setup_slash_commands
+from status import setup_status
+import status as status_module
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("moloj")
+# ─── Logging Setup ─────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("moloj.log", encoding="utf-8"),
+    ],
+)
+logger = logging.getLogger(__name__)
 
-PREFIX = "moloj"
+DEFAULT_PREFIX = "moloj"
+MAX_HISTORY = 20
+
 
 # ─── Bot Setup ─────────────────────────────────────────────────────────────────
 intents = discord.Intents.default()
@@ -24,81 +49,48 @@ intents.message_content = True
 intents.members = True
 
 bot = discord.Client(intents=intents)
+bot.tree = app_commands.CommandTree(bot)
 
-# Per-channel conversation history { channel_id: [messages] }
-history: dict[str, list] = {}
-
-
-# ─── Help Embed ────────────────────────────────────────────────────────────────
-def build_help_embed() -> discord.Embed:
-    """Build a rich embed panel showing all available commands."""
-    embed = discord.Embed(
-        title="✨ Moloj — Command Panel",
-        description=(
-            f"Hey there! I'm **Moloj**, your AI-powered server assistant.\n"
-            f"Use the prefix **`{PREFIX}`** or **@mention** me to get started.\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        ),
-        color=0x5865F2  # Discord blurple
-    )
-
-    embed.add_field(
-        name="💬  General",
-        value=(
-            f"**`{PREFIX} <message>`** — Chat with me\n"
-            f"**`{PREFIX} help`** — Show this panel\n"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🔨  Moderation  *(Admin/Mod only)*",
-        value=(
-            f"**`{PREFIX} kick @user <reason>`**\n"
-            f"**`{PREFIX} ban @user <reason>`**\n"
-            f"**`{PREFIX} mute @user <duration>`**\n"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🎭  Roles  *(Admin/Mod only)*",
-        value=(
-            f"**`{PREFIX} give @user <role>`**\n"
-            f"**`{PREFIX} remove role @user <role>`**\n"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="📢  Channels  *(Admin/Mod only)*",
-        value=(
-            f"**`{PREFIX} create channel <name>`**\n"
-            f"**`{PREFIX} announce <#channel> <message>`**\n"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="👥  Utility",
-        value=(
-            f"**`{PREFIX} list members`** — Show online members\n"
-            f"**`{PREFIX} dm @user <message>`** — DM a member\n"
-        ),
-        inline=False
-    )
-
-    embed.set_footer(text=f"Prefix: {PREFIX} • Powered by NVIDIA NIM AI")
-    embed.timestamp = datetime.now(timezone.utc)
-    return embed
+# Register slash commands & status
+setup_slash_commands(bot)
+setup_status(bot)
 
 
-# ─── Helper: Build User Context Header ────────────────────────────────────────
-def build_context_header(message: discord.Message) -> str:
-    """Inject metadata so AI knows who is talking and what permissions they have."""
-    author = message.author
+# ─── UptimeRobot Keep-Alive Server ────────────────────────────────────────────
+async def start_ping_server():
+    """Starts a minimal HTTP server so UptimeRobot can ping the bot."""
+    app = web.Application()
     
-    # Check for Super User
+    async def hello(request):
+        return web.Response(text="Moloj is alive and running!")
+        
+    app.add_routes([web.get('/', hello)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    
+    port = int(os.getenv("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    
+    try:
+        await site.start()
+        logger.info(f"Ping server started on port {port} for UptimeRobot")
+    except Exception as e:
+        logger.error(f"Could not start ping server (port in use?): {e}")
+
+
+# ─── Interactive Callback ─────────────────────────────────────────────────────
+async def on_interactive_selection(
+    interaction: discord.Interaction,
+    selected_text: str,
+    channel_id: str,
+):
+    """Handle button/select clicks — feed the user's choice back to the AI."""
+
+    author = interaction.user
+    guild = interaction.guild
+    guild_id = str(guild.id) if guild else "0"
+
+    # Determine role tag
     super_users = [u.strip() for u in os.getenv("SUPER_USERS", "").split(",") if u.strip()]
     is_super_user = str(author.name) in super_users or str(author.id) in super_users
 
@@ -112,7 +104,176 @@ def build_context_header(message: discord.Message) -> str:
         else:
             role_tag = "Member"
     else:
-        role_tag = "Member"  # DM fallback
+        role_tag = "Member"
+
+    channel_name = getattr(interaction.channel, "name", "DM")
+    header = f"[User: {author.display_name} | ID: {author.id} | Role: {role_tag} | Channel: #{channel_name}]"
+    selection_msg = f"{header}\n\n[User clicked button: {selected_text}]"
+
+    # Save to DB and get history
+    await save_message(channel_id, guild_id, "user", selection_msg)
+    history = await get_history(channel_id, limit=MAX_HISTORY)
+
+    # Get AI response
+    async with interaction.channel.typing():
+        try:
+            ai_result = get_ai_response(history)
+            reply_parts = []
+
+            if ai_result["tool_calls"]:
+                is_admin = (
+                    isinstance(author, discord.Member)
+                    and author.guild_permissions.administrator
+                ) or is_super_user
+                for tc in ai_result["tool_calls"]:
+                    if guild:
+                        result = await execute_action(
+                            tc["name"], tc["arguments"], guild, is_admin=is_admin
+                        )
+                    else:
+                        result = "❌ Server actions unavailable in DMs."
+                    reply_parts.append(result)
+
+            if ai_result["text"]:
+                reply_parts.append(ai_result["text"])
+
+            final_reply = "\n\n".join(reply_parts) if reply_parts else "✅ Done."
+
+            # Save assistant response to DB
+            await save_message(channel_id, guild_id, "assistant", final_reply)
+
+            # Parse for interactive blocks
+            clean_text, view = parse_interactive_blocks(
+                final_reply, on_interactive_selection, channel_id
+            )
+
+            send_kwargs = {}
+            if view is not None:
+                send_kwargs["view"] = view
+
+            if len(clean_text) > 2000:
+                chunks = [clean_text[i:i+1990] for i in range(0, len(clean_text), 1990)]
+                for i, chunk in enumerate(chunks):
+                    if i == 0:
+                        await interaction.followup.send(chunk, **send_kwargs)
+                    else:
+                        await interaction.channel.send(chunk)
+            else:
+                await interaction.followup.send(clean_text, **send_kwargs)
+
+        except Exception as e:
+            logger.error(f"Error during button callback: {e}", exc_info=True)
+            try:
+                await interaction.followup.send(f"⚠️ Error: `{str(e)}`")
+            except Exception:
+                pass
+
+
+# ─── Help Embed ────────────────────────────────────────────────────────────────
+def build_help_embed(prefix: str = DEFAULT_PREFIX) -> discord.Embed:
+    """Build a rich embed panel showing all available commands."""
+    embed = discord.Embed(
+        title="✨ Moloj — Command Panel",
+        description=(
+            f"Hey there! I'm **Moloj**, your AI-powered server assistant.\n"
+            f"Use the prefix **`{prefix}`** or **@mention** me to get started.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        color=0x5865F2,
+    )
+
+    embed.add_field(
+        name="💬  General",
+        value=(
+            f"**`{prefix} <message>`** — Chat with me\n"
+            f"**`{prefix} help`** — Show this panel\n"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🔨  Moderation  *(Admin/Mod only)*",
+        value=(
+            f"**`{prefix} kick @user <reason>`**\n"
+            f"**`{prefix} ban @user <reason>`**\n"
+            f"**`{prefix} mute @user <duration>`**\n"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🎭  Roles  *(Admin/Mod only)*",
+        value=(
+            f"**`{prefix} give @user <role>`**\n"
+            f"**`{prefix} remove role @user <role>`**\n"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="📢  Channels  *(Admin/Mod only)*",
+        value=(
+            f"**`{prefix} create channel <name>`**\n"
+            f"**`{prefix} announce <#channel> <message>`**\n"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="👥  Utility",
+        value=(
+            f"**`{prefix} list members`** — Show online members\n"
+            f"**`{prefix} dm @user <message>`** — DM a member\n"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🎛️  Interactive",
+        value=(
+            "I automatically create **buttons** and **menus** when I give you choices!\n"
+            "Just ask me a question or request a quiz/poll — no commands needed.\n"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="⚡  Slash Commands",
+        value=(
+            "**/kick** — Kick a member\n"
+            "**/ban** — Ban a member\n"
+            "**/purge** — Delete messages\n"
+            "**/config** — Server settings\n"
+            "**/status** — Bot health\n"
+            "**/clear_history** — Reset AI memory\n"
+        ),
+        inline=False,
+    )
+
+    embed.set_footer(text=f"Prefix: {prefix} • Powered by NVIDIA NIM AI")
+    embed.timestamp = datetime.now(timezone.utc)
+    return embed
+
+
+# ─── Helper: Build User Context Header ────────────────────────────────────────
+def build_context_header(message: discord.Message) -> str:
+    """Inject metadata so AI knows who is talking and what permissions they have."""
+    author = message.author
+
+    super_users = [u.strip() for u in os.getenv("SUPER_USERS", "").split(",") if u.strip()]
+    is_super_user = str(author.name) in super_users or str(author.id) in super_users
+
+    if is_super_user:
+        role_tag = "Admin"
+    elif isinstance(author, discord.Member):
+        if author.guild_permissions.administrator:
+            role_tag = "Admin"
+        elif any(r.name.lower() in ["mod", "moderator", "staff", "helper"] for r in author.roles):
+            role_tag = "Mod"
+        else:
+            role_tag = "Member"
+    else:
+        role_tag = "Member"
 
     channel_name = getattr(message.channel, "name", "DM")
     return f"[User: {author.display_name} | ID: {author.id} | Role: {role_tag} | Channel: #{channel_name}]"
@@ -121,12 +282,26 @@ def build_context_header(message: discord.Message) -> str:
 # ─── Events ───────────────────────────────────────────────────────────────────
 @bot.event
 async def on_ready():
+    # Start the HTTP ping server
+    asyncio.create_task(start_ping_server())
+
+    # Initialize database & prune old history
+    await init_db()
+    await prune_old_history(days=7)
+
+    # Sync slash commands
+    try:
+        await bot.tree.sync()
+        logger.info(f"Slash commands synced for {len(bot.guilds)} server(s)")
+    except Exception as e:
+        logger.error(f"Failed to sync slash commands: {e}", exc_info=True)
+
     logger.info(f"✅ Moloj is online as {bot.user}")
     logger.info(f"   Connected to {len(bot.guilds)} server(s)")
     await bot.change_presence(
         activity=discord.Activity(
             type=discord.ActivityType.watching,
-            name=f"the server | {PREFIX}"
+            name=f"the server | {DEFAULT_PREFIX}",
         )
     )
 
@@ -135,7 +310,12 @@ async def on_ready():
 async def on_member_join(member):
     if member.guild.system_channel:
         try:
-            await member.guild.system_channel.send(f"👋 Welcome to the server, {member.mention}! Type `{PREFIX} help` to see what I can do.")
+            config = await get_server_config(str(member.guild.id))
+            prefix = config.get("prefix", DEFAULT_PREFIX)
+            await member.guild.system_channel.send(
+                f"👋 Welcome to the server, {member.mention}! "
+                f"Type `{prefix} help` to see what I can do."
+            )
         except Exception as e:
             logger.error(f"Failed to send welcome message: {e}")
 
@@ -145,10 +325,30 @@ async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
 
-    # Respond on: @mention, prefix, or DM
-    is_dm      = isinstance(message.channel, discord.DMChannel)
+    # Increment message counter for /status
+    status_module.message_count += 1
+
+    # ── Load per-server config ─────────────────────────────────────────────
+    is_dm = isinstance(message.channel, discord.DMChannel)
+
+    if is_dm:
+        prefix = DEFAULT_PREFIX
+        guild_id = "0"
+    else:
+        guild_id = str(message.guild.id)
+        config = await get_server_config(guild_id)
+        prefix = config.get("prefix", DEFAULT_PREFIX)
+
+        # Check allowed channels (if configured, only respond in those)
+        allowed = config.get("allowed_channels", "")
+        if allowed:
+            allowed_ids = [c.strip() for c in allowed.split(",") if c.strip()]
+            if str(message.channel.id) not in allowed_ids:
+                return
+
+    # ── Trigger detection ──────────────────────────────────────────────────
     is_mention = bot.user in message.mentions
-    is_prefix  = message.content.lower().startswith(PREFIX)
+    is_prefix = message.content.lower().startswith(prefix)
 
     if not (is_dm or is_mention or is_prefix):
         return
@@ -158,71 +358,107 @@ async def on_message(message: discord.Message):
     if is_mention:
         content = content.replace(f"<@{bot.user.id}>", "").replace(f"<@!{bot.user.id}>", "").strip()
     elif is_prefix:
-        content = content[len(PREFIX):].strip()
+        content = content[len(prefix):].strip()
 
     # Show help panel if empty or "help"
     if not content or content.lower() == "help":
-        await message.reply(embed=build_help_embed())
+        await message.reply(embed=build_help_embed(prefix))
         return
 
-    # Build full message = context header + user message
-    header           = build_context_header(message)
+    # ── Build user message with context ────────────────────────────────────
+    header = build_context_header(message)
     full_user_message = f"{header}\n\n{content}"
-
     channel_id = str(message.channel.id)
-    if channel_id not in history:
-        if len(history) >= 100:
-            history.pop(next(iter(history)))
-        history[channel_id] = []
-    else:
-        history[channel_id] = history.pop(channel_id)
 
-    history[channel_id].append({"role": "user", "content": full_user_message})
+    # Save user message to database
+    await save_message(channel_id, guild_id, "user", full_user_message)
 
+    # Get conversation history from database
+    history = await get_history(channel_id, limit=MAX_HISTORY)
+
+    # ── Process with AI ────────────────────────────────────────────────────
     async with message.channel.typing():
         try:
-            # ── 1. Ask AI ────────────────────────────────────────────────────
-            ai_result = get_ai_response(history[channel_id])
+            # ── 1. Ask AI (non-streaming for tool call support) ────────────
+            ai_result = get_ai_response(history)
             reply_parts = []
 
-            # ── 2. Run any tool calls ─────────────────────────────────────────
+            # ── 2. Run any tool calls ──────────────────────────────────────
             if ai_result["tool_calls"]:
                 guild = message.guild
+                # Determine if caller is admin for sanitization
+                is_admin = False
+                if guild:
+                    super_users = [u.strip() for u in os.getenv("SUPER_USERS", "").split(",") if u.strip()]
+                    is_admin = (
+                        isinstance(message.author, discord.Member)
+                        and message.author.guild_permissions.administrator
+                    ) or (
+                        str(message.author.name) in super_users
+                        or str(message.author.id) in super_users
+                    )
+
                 for tc in ai_result["tool_calls"]:
                     if guild:
-                        result = await execute_action(tc["name"], tc["arguments"], guild)
+                        result = await execute_action(
+                            tc["name"], tc["arguments"], guild, is_admin=is_admin
+                        )
                     else:
                         result = "❌ Server actions unavailable in DMs."
                     reply_parts.append(result)
 
-                    # Feed result back to history so AI knows what happened
-                    history[channel_id].append({
-                        "role": "tool",
-                        "tool_call_id": tc["id"],
-                        "content": result
-                    })
-
-            # ── 3. Add text reply ─────────────────────────────────────────────
+            # ── 3. Add text reply ──────────────────────────────────────────
             if ai_result["text"]:
                 reply_parts.append(ai_result["text"])
 
             final_reply = "\n\n".join(reply_parts) if reply_parts else "✅ Done."
 
-            # ── 4. Send (handle 2000 char Discord limit) ──────────────────────
-            if len(final_reply) > 2000:
-                chunks = [final_reply[i:i+1990] for i in range(0, len(final_reply), 1990)]
-                for i, chunk in enumerate(chunks):
-                    await message.reply(chunk) if i == 0 else await message.channel.send(chunk)
-            else:
-                await message.reply(final_reply)
+            # ── 4. Save assistant response to database ─────────────────────
+            await save_message(channel_id, guild_id, "assistant", final_reply)
 
-            history[channel_id].append({"role": "assistant", "content": final_reply})
+            # ── 5. Parse for interactive blocks (buttons, polls, etc.) ─────
+            clean_text, view = parse_interactive_blocks(
+                final_reply, on_interactive_selection, channel_id
+            )
+
+            # ── 6. Send (handle 2000 char Discord limit) ──────────────────
+            send_kwargs = {}
+            if view is not None:
+                send_kwargs["view"] = view
+
+            if len(clean_text) > 2000:
+                chunks = [clean_text[i:i+1990] for i in range(0, len(clean_text), 1990)]
+                for i, chunk in enumerate(chunks):
+                    if i == 0:
+                        await message.reply(chunk, **send_kwargs)
+                    else:
+                        await message.channel.send(chunk)
+            else:
+                await message.reply(clean_text, **send_kwargs)
 
         except Exception as e:
             logger.error(f"Error during message processing: {e}", exc_info=True)
             await message.reply(f"⚠️ Error: `{str(e)}`")
 
 
+# ─── Graceful Shutdown ─────────────────────────────────────────────────────────
+async def shutdown():
+    """Gracefully close the bot."""
+    logger.info("Shutting down Moloj gracefully...")
+    await bot.close()
+
+
+def handle_sigterm(*args):
+    """Handle SIGTERM for graceful shutdown (e.g. Docker, systemd)."""
+    logger.info("SIGTERM received")
+    asyncio.create_task(shutdown())
+
+
+signal.signal(signal.SIGTERM, handle_sigterm)
+signal.signal(signal.SIGINT, handle_sigterm)
+
+
+# ─── Start Bot ─────────────────────────────────────────────────────────────────
 token = os.getenv("DISCORD_BOT_TOKEN")
 if not token:
     logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")

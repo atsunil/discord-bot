@@ -1,30 +1,40 @@
 """
 ai_engine.py — NVIDIA NIM API Integration
-Handles: system prompt, tool definitions, AI response parsing
+Handles: system prompt, tool definitions, AI response parsing, streaming
 """
 
 import os
 import json
 import time
+import asyncio
 import logging
 from openai import OpenAI
 from dotenv import load_dotenv
 
-logger = logging.getLogger("moloj.ai_engine")
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 # ─── NVIDIA Client Setup ───────────────────────────────────────────────────────
-nvidia = OpenAI(
+client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
     api_key=os.getenv("NVIDIA_API_KEY")
 )
 
-MODEL = "openai/gpt-oss-120b"   # Change to any NVIDIA NIM model you prefer
-# Other options:
-# "nvidia/llama-3.1-nemotron-70b-instruct"  ← best for reasoning + tool use
-# "meta/llama-3.1-405b-instruct"            ← most powerful
-# "mistralai/mixtral-8x22b-instruct-v0.1"   ← fast + cheap
+# Also keep legacy alias
+nvidia = client
+
+MODELS = {
+    "default": "openai/gpt-oss-120b",
+    "fast": "meta/llama-3.3-70b-instruct",
+    "powerful": "meta/llama-3.1-405b-instruct",
+}
+MODEL = MODELS["default"]
+
+
+def get_model(task_type: str = "default") -> str:
+    """Return the model name for a given task type."""
+    return MODELS.get(task_type, MODELS["default"])
 
 
 # ─── System Prompt ─────────────────────────────────────────────────────────────
@@ -72,9 +82,43 @@ This is metadata — read it but don't quote it back to the user.
 4. **Tool errors**: Explain what went wrong simply.
 5. **Asking for User ID**: If a mod says "kick John" but no ID, ask them to provide the User ID or use `list_members` tool to find it.
 
+## Interactive Responses — IMPORTANT
+When your response involves choices, options, Q&A, or confirmations, you MUST use interactive blocks
+so users can click buttons instead of typing. Place these on their OWN line at the END of your message.
+
+### Block Types:
+- **Choices/Options** (2-5 options): `[BUTTONS: Option A | Option B | Option C]`
+- **Yes/No/Confirm** (before important actions): `[CONFIRM: brief description of what will happen]`
+- **Polls/Votes**: `[POLL: The question? | Choice 1 | Choice 2 | Choice 3]`
+- **Many options (6+)**: `[SELECT: Pick one | Option A | Option B | ... | Option N]`
+
+### Interactive Response Rules:
+1. Place interactive blocks on their OWN line at the END of your message
+2. Keep button labels SHORT (under 40 characters each)
+3. Max 5 options for BUTTONS — use SELECT for more
+4. Use CONFIRM before any destructive actions like kick, ban, or purge
+5. You can have explanatory text ABOVE the interactive block
+6. Only ONE interactive block per message
+7. ALWAYS use interactive blocks when you are presenting the user with options to choose from
+8. For Q&A or quizzes, put the answer options in a BUTTONS block
+9. When a user clicks a button, their selection will be sent back to you as a new message — respond naturally to their choice
+
+### Examples:
+- User asks "what language should I learn?" → give brief descriptions then `[BUTTONS: Python | JavaScript | Java]`
+- User asks for a quiz → ask the question then `[BUTTONS: Answer A | Answer B | Answer C | Answer D]`
+- Admin says "kick @user" → explain what will happen then `[CONFIRM: Kick username from server]`
+- User asks "create a poll about dinner" → `[POLL: What's for dinner? | Pizza | Sushi | Burgers | Tacos]`
+
 ## Important
 - NEVER make up User IDs. If you don't know the ID, use `list_members` or ask.
 - NEVER ban/kick without a stated reason.
+- Keep responses under 1500 characters unless the user specifically asks for detail.
+
+## Multiple Tool Calls — CRITICAL
+When a task requires MULTIPLE actions (e.g. "create 3 channels", "set up a category with channels"), you MUST call the tool MULTIPLE TIMES in a SINGLE response — one call per channel/action. Do NOT call just once and describe the rest in text. For example:
+- "Create channels #general, #memes, #help in Fun category" → call `create_channel` THREE times, once for each channel, all in the same response.
+- "Kick user A and user B" → call `kick_member` TWICE.
+Always complete ALL requested actions in one response using parallel tool calls.
 """
 
 
@@ -197,30 +241,39 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "create_channel",
-            "description": "Create a new text or voice channel in the server.",
+            "name": "create_channels",
+            "description": "Create one or more new text or voice channels in the server.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "channel_name": {
-                        "type": "string",
-                        "description": "Channel name (lowercase, use hyphens instead of spaces)"
-                    },
-                    "channel_type": {
-                        "type": "string",
-                        "enum": ["text", "voice"],
-                        "description": "Channel type: 'text' or 'voice'"
-                    },
-                    "category_name": {
-                        "type": "string",
-                        "description": "Optional: exact category name to place the channel in"
-                    },
-                    "topic": {
-                        "type": "string",
-                        "description": "Optional: channel topic description"
+                    "channels": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "channel_name": {
+                                    "type": "string",
+                                    "description": "Channel name (lowercase, use hyphens instead of spaces)"
+                                },
+                                "channel_type": {
+                                    "type": "string",
+                                    "enum": ["text", "voice"],
+                                    "description": "Channel type: 'text' or 'voice'"
+                                },
+                                "category_name": {
+                                    "type": "string",
+                                    "description": "Optional: exact category name to place the channel in"
+                                },
+                                "topic": {
+                                    "type": "string",
+                                    "description": "Optional: channel topic description"
+                                }
+                            },
+                            "required": ["channel_name", "channel_type"]
+                        }
                     }
                 },
-                "required": ["channel_name", "channel_type"]
+                "required": ["channels"]
             }
         }
     },
@@ -382,7 +435,16 @@ TOOLS = [
     }
 ]
 
-# ─── AI Response Function ──────────────────────────────────────────────────────
+# ─── Helper: Build Messages List ───────────────────────────────────────────────
+def build_messages(history: list, user_message: str = None) -> list:
+    """Build the full messages list with system prompt prepended."""
+    msgs = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+    if user_message:
+        msgs.append({"role": "user", "content": user_message})
+    return msgs
+
+
+# ─── AI Response Function (Non-Streaming — supports tool calls) ────────────────
 def get_ai_response(messages: list) -> dict:
     """
     Send conversation to NVIDIA API and get back:
@@ -393,12 +455,13 @@ def get_ai_response(messages: list) -> dict:
     response = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = nvidia.chat.completions.create(
+            response = client.chat.completions.create(
                 model=MODEL,
                 messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
                 tools=TOOLS,
                 tool_choice="auto",
-                temperature=0.7
+                temperature=0.7,
+                max_tokens=1024
             )
             break
         except Exception as e:
@@ -422,3 +485,57 @@ def get_ai_response(messages: list) -> dict:
             })
 
     return result
+
+
+# ─── AI Response Function (Streaming — progressive Discord edits) ──────────────
+async def get_ai_response_stream(messages: list, discord_message) -> str:
+    """
+    Stream AI response tokens and progressively edit a Discord message.
+    Does NOT support tool calls (use get_ai_response for that).
+
+    Args:
+        messages: Full conversation history (will be prepended with system prompt).
+        discord_message: The original discord.Message to reply in the same channel.
+
+    Returns:
+        The full response string when streaming is complete.
+    """
+    full_response = ""
+    last_edit = ""
+
+    # Send placeholder message to edit progressively
+    sent = await discord_message.channel.send("⏳ Thinking...")
+
+    try:
+        # Run the sync streaming call in a thread to avoid blocking
+        def _create_stream():
+            return client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
+                stream=True,
+                temperature=0.7,
+                max_tokens=1024,
+            )
+
+        stream = await asyncio.to_thread(_create_stream)
+
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta.content or ""
+            full_response += delta
+
+            # Edit every ~50 chars to avoid rate limiting
+            if len(full_response) - len(last_edit) >= 50:
+                await sent.edit(content=full_response[:2000] or "...")
+                last_edit = full_response
+
+        # Final edit with complete response
+        await sent.edit(content=full_response[:2000] or "No response.")
+        logger.info(f"Streamed response: {len(full_response)} chars")
+        return full_response
+
+    except Exception as e:
+        logger.error(f"Streaming failed: {e}", exc_info=True)
+        await sent.edit(content="❌ Streaming error. Try again.")
+        return ""

@@ -3,12 +3,29 @@ actions.py — Discord Server Action Executor
 Maps tool call names → actual Discord API calls
 """
 
+import re
 import discord
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-async def execute_action(tool_name: str, args: dict, guild: discord.Guild) -> str:
+def sanitize_input(text: str, is_admin: bool = False) -> str:
+    """
+    Strip @everyone and @here from user-provided text
+    unless the caller is an Admin.
+    """
+    if is_admin:
+        return text
+    text = re.sub(r"@everyone", "@\u200beveryone", text)
+    text = re.sub(r"@here", "@\u200bhere", text)
+    return text
+
+
+async def execute_action(tool_name: str, args: dict, guild: discord.Guild, is_admin: bool = False) -> str:
     """Execute a Discord server action. Returns a result string."""
+    logger.info(f"Executing action: {tool_name} | Args: {args}")
     try:
         # ── Kick Member ─────────────────────────────────────────────────────
         if tool_name == "kick_member":
@@ -73,22 +90,31 @@ async def execute_action(tool_name: str, args: dict, guild: discord.Guild) -> st
             await member.remove_roles(role)
             return f"✅ Removed **{role.name}** from **{member.display_name}**."
 
-        # ── Create Channel ───────────────────────────────────────────────────
-        elif tool_name == "create_channel":
-            name = args["channel_name"].lower().replace(" ", "-")
-            category = None
-            if args.get("category_name"):
-                category = discord.utils.get(guild.categories, name=args["category_name"])
-                if not category:
-                    return f"❌ Category `{args['category_name']}` not found."
+        # ── Create Channels ──────────────────────────────────────────────────
+        elif tool_name == "create_channels":
+            created_names = []
+            for ch_data in args.get("channels", []):
+                name = ch_data["channel_name"].lower().replace(" ", "-")
+                category = None
+                if ch_data.get("category_name"):
+                    category = discord.utils.get(guild.categories, name=ch_data["category_name"])
+                    if not category:
+                        # Auto-create the category if it doesn't exist
+                        category = await guild.create_category(ch_data["category_name"])
+                        logger.info(f"Auto-created category: {category.name}")
 
-            if args["channel_type"] == "voice":
-                ch = await guild.create_voice_channel(name, category=category)
-                return f"✅ Voice channel **{ch.name}** created."
-            else:
-                topic = args.get("topic", "")
-                ch = await guild.create_text_channel(name, category=category, topic=topic)
-                return f"✅ Text channel **#{ch.name}** created."
+                if ch_data["channel_type"] == "voice":
+                    ch = await guild.create_voice_channel(name, category=category)
+                    created_names.append(f"🔊 {ch.name}")
+                else:
+                    topic = ch_data.get("topic", "")
+                    ch = await guild.create_text_channel(name, category=category, topic=topic)
+                    created_names.append(f"💬 #{ch.name}")
+            
+            if not created_names:
+                return "❌ No channels provided to create."
+            
+            return f"✅ Created {len(created_names)} channels: {', '.join(created_names)}"
 
         # ── Send Announcement ────────────────────────────────────────────────
         elif tool_name == "send_announcement":
@@ -96,7 +122,7 @@ async def execute_action(tool_name: str, args: dict, guild: discord.Guild) -> st
             if not channel:
                 available = ", ".join([f"#{c.name}" for c in guild.text_channels])
                 return f"❌ Channel `#{args['channel_name']}` not found.\nAvailable: {available}"
-            await channel.send(args["message"])
+            await channel.send(sanitize_input(args["message"], is_admin))
             return f"✅ Message sent to **#{channel.name}**."
 
         # ── List Members ─────────────────────────────────────────────────────
@@ -118,7 +144,7 @@ async def execute_action(tool_name: str, args: dict, guild: discord.Guild) -> st
                 return f"❌ No member found with ID `{args['user_id']}`. Use `list_members` to find IDs."
             try:
                 dm_channel = await member.create_dm()
-                await dm_channel.send(args["message"])
+                await dm_channel.send(sanitize_input(args["message"], is_admin))
                 return f"✅ DM sent to **{member.display_name}**."
             except discord.Forbidden:
                 return f"❌ Cannot DM **{member.display_name}** — they may have DMs disabled."
@@ -129,7 +155,7 @@ async def execute_action(tool_name: str, args: dict, guild: discord.Guild) -> st
             if not member:
                 return f"❌ No member found with ID `{args['user_id']}`."
             count = max(1, min(100, args["count"]))
-            message_content = args["message"]
+            message_content = sanitize_input(args["message"], is_admin)
             
             try:
                 dm_channel = await member.create_dm()
