@@ -10,6 +10,7 @@ import os
 import signal
 import asyncio
 import logging
+import time
 from aiohttp import web
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -466,4 +467,17 @@ token = os.getenv("DISCORD_BOT_TOKEN")
 if not token:
     logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
     exit(1)
-bot.run(token)
+
+try:
+    bot.run(token)
+except discord.errors.HTTPException as e:
+    if e.status == 429:
+        logger.error("⚠️ Rate limited (429)! Sleeping for 15 minutes to avoid Cloudflare IP ban...")
+        time.sleep(900)  # Pause the crash loop for 15 minutes
+    else:
+        logger.error(f"HTTP Exception during startup: {e}")
+        time.sleep(15)  # General backoff
+except Exception as e:
+    logger.error(f"Fatal error running bot: {e}")
+    time.sleep(15)  # Backoff to prevent instant container restats
+
