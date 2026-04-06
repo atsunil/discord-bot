@@ -61,25 +61,28 @@ setup_status(bot)
 
 
 # ─── UptimeRobot Keep-Alive Server ────────────────────────────────────────────
-async def start_ping_server():
-    """Starts a minimal HTTP server so UptimeRobot can ping the bot."""
-    app = web.Application()
-    
-    async def hello(request):
-        return web.Response(text="Moloj is alive and running!")
-        
-    app.add_routes([web.get('/', hello)])
-    runner = web.AppRunner(app)
-    await runner.setup()
-    
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Moloj is alive and running!")
+    def log_message(self, format, *args):
+        pass
+
+def run_ping_server():
     port = int(os.getenv("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    
     try:
-        await site.start()
-        logger.info(f"Ping server started on port {port} for UptimeRobot")
+        server = HTTPServer(('0.0.0.0', port), PingHandler)
+        logger.info(f"Ping server (thread) started on port {port} for UptimeRobot")
+        server.serve_forever()
     except Exception as e:
-        logger.error(f"Could not start ping server (port in use?): {e}")
+        logger.error(f"Could not start thread ping server: {e}")
+
+threading.Thread(target=run_ping_server, daemon=True).start()
 
 
 # ─── Interactive Callback ─────────────────────────────────────────────────────
@@ -286,8 +289,6 @@ def build_context_header(message: discord.Message) -> str:
 # ─── Events ───────────────────────────────────────────────────────────────────
 @bot.event
 async def on_ready():
-    # Start the HTTP ping server
-    asyncio.create_task(start_ping_server())
 
     # Initialize database & prune old history
     await init_db()
@@ -455,7 +456,12 @@ async def shutdown():
 def handle_sigterm(*args):
     """Handle SIGTERM for graceful shutdown (e.g. Docker, systemd)."""
     logger.info("SIGTERM received")
-    asyncio.create_task(shutdown())
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(shutdown())
+    except RuntimeError:
+        import sys
+        sys.exit(0)
 
 
 signal.signal(signal.SIGTERM, handle_sigterm)
