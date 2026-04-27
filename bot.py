@@ -478,6 +478,9 @@ if not token:
 retry_delay = 15
 max_delay = 300
 
+# discord's sentinel — resetting __session to this makes discord.py recreate it
+from discord.utils import MISSING as _DISCORD_MISSING
+
 while True:
     try:
         bot.run(token)
@@ -503,9 +506,18 @@ while True:
         retry_delay = min(retry_delay * 2, max_delay)
     except Exception as e:
         error_msg = str(e)
-        if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower():
-            logger.warning(f"Network/SSL error — discord.com unreachable: {e}\nRetrying in {retry_delay}s...")
+        if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower() or "Session is closed" in error_msg:
+            logger.warning(f"Network/connection error: {e}\nRetrying in {retry_delay}s...")
         else:
             logger.error(f"Fatal error running bot: {e}", exc_info=True)
         time.sleep(retry_delay)
         retry_delay = min(retry_delay * 2, max_delay)
+
+    # ── Reset bot for clean reconnect ─────────────────────────────────────
+    # bot.run() calls asyncio.run() → new event loop each time.
+    # The previous loop's aiohttp session is now CLOSED and invalid.
+    # Reset it to MISSING so discord.py creates a fresh one next time.
+    logger.info("Resetting bot state for clean reconnect...")
+    bot._closed = False
+    bot._ready.clear()
+    bot.http._HTTPClient__session = _DISCORD_MISSING
