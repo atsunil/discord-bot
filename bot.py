@@ -12,6 +12,7 @@ import asyncio
 import logging
 import time
 import aiohttp
+import certifi
 from aiohttp import web
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -470,54 +471,62 @@ signal.signal(signal.SIGINT, handle_sigterm)
 
 
 # ─── Start Bot ─────────────────────────────────────────────────────────────────
-token = os.getenv("DISCORD_BOT_TOKEN")
-if not token:
-    logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
-    exit(1)
+# Force aiohttp (and therefore discord.py) to use certifi's bundled CA certificates.
+# This prevents the "ssl:default [None]" error in environments missing system certs (like Hugging Face Spaces).
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
-retry_delay = 15
-max_delay = 300
-
-# discord's sentinel — resetting __session to this makes discord.py recreate it
-from discord.utils import MISSING as _DISCORD_MISSING
-
-while True:
-    try:
-        bot.run(token)
-        break  # Clean exit (SIGTERM)
-    except discord.LoginFailure:
-        logger.error("Invalid DISCORD_BOT_TOKEN. Exiting.")
+async def run_bot():
+    """Run the bot with an explicit event loop to prevent 'Session is closed' errors on reconnect."""
+    token = os.getenv("DISCORD_BOT_TOKEN")
+    if not token:
+        logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
         exit(1)
-    except discord.errors.HTTPException as e:
-        if e.status == 429:
-            logger.error("⚠️ Rate limited (429)! Sleeping for 15 minutes to avoid Cloudflare IP ban...")
-            time.sleep(900)
-        else:
-            logger.error(f"HTTP Exception during startup: {e}")
-            time.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, max_delay)
-    except (
-        aiohttp.ClientConnectorError,
-        aiohttp.ServerDisconnectedError,
-        aiohttp.ClientOSError,
-    ) as e:
-        logger.warning(f"Network error — discord.com unreachable: {e}\nRetrying in {retry_delay}s...")
-        time.sleep(retry_delay)
-        retry_delay = min(retry_delay * 2, max_delay)
-    except Exception as e:
-        error_msg = str(e)
-        if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower() or "Session is closed" in error_msg:
-            logger.warning(f"Network/connection error: {e}\nRetrying in {retry_delay}s...")
-        else:
-            logger.error(f"Fatal error running bot: {e}", exc_info=True)
-        time.sleep(retry_delay)
-        retry_delay = min(retry_delay * 2, max_delay)
 
-    # ── Reset bot for clean reconnect ─────────────────────────────────────
-    # bot.run() calls asyncio.run() → new event loop each time.
-    # The previous loop's aiohttp session is now CLOSED and invalid.
-    # Reset it to MISSING so discord.py creates a fresh one next time.
-    logger.info("Resetting bot state for clean reconnect...")
-    bot._closed = False
-    bot._ready.clear()
-    bot.http._HTTPClient__session = _DISCORD_MISSING
+    retry_delay = 15
+    max_delay = 300
+
+    while True:
+        try:
+            logger.info(f"Connecting to Discord... (retry_delay={retry_delay}s)")
+            await bot.start(token)
+            break  # Clean exit (SIGTERM)
+        except discord.LoginFailure:
+            logger.error("Invalid DISCORD_BOT_TOKEN. Please check your .env file.")
+            exit(1)
+        except discord.errors.HTTPException as e:
+            if e.status == 429:
+                logger.error("⚠️ Rate limited (429)! Sleeping for 15 minutes to avoid Cloudflare IP ban...")
+                await asyncio.sleep(900)
+            else:
+                logger.error(f"HTTP Exception during startup: {e}")
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, max_delay)
+        except (
+            aiohttp.ClientConnectorError,
+            aiohttp.ServerDisconnectedError,
+            aiohttp.ClientOSError,
+        ) as e:
+            logger.warning(f"Network error — discord.com unreachable: {e}\nRetrying in {retry_delay}s...")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, max_delay)
+        except Exception as e:
+            error_msg = str(e)
+            if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower():
+                logger.warning(f"Network/SSL error — discord.com unreachable: {e}\nRetrying in {retry_delay}s...")
+            else:
+                logger.error(f"Unexpected error running bot: {e}", exc_info=True)
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, max_delay)
+        
+        # If we got here, an exception happened and we are retrying.
+        # Clean up the previous connection attempt so we can reconnect cleanly in the same loop.
+        logger.info("Reconnecting in same event loop...")
+        if not bot.is_closed():
+            await bot.close()
+            # Wait for internal teardown before trying to restart
+            await asyncio.sleep(1)
+
+try:
+    asyncio.run(run_bot())
+except KeyboardInterrupt:
+    pass
