@@ -10,7 +10,7 @@ import os
 import signal
 import asyncio
 import logging
-import ssl
+import time
 import aiohttp
 from aiohttp import web
 from datetime import datetime, timezone
@@ -62,25 +62,28 @@ setup_status(bot)
 
 
 # ─── UptimeRobot Keep-Alive Server ────────────────────────────────────────────
-async def start_ping_server():
-    """Starts a minimal HTTP server so UptimeRobot can ping the bot."""
-    app = web.Application()
-    
-    async def hello(request):
-        return web.Response(text="Moloj is alive and running!")
-        
-    app.add_routes([web.get('/', hello)])
-    runner = web.AppRunner(app)
-    await runner.setup()
-    
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Moloj is alive and running!")
+    def log_message(self, format, *args):
+        pass
+
+def run_ping_server():
     port = int(os.getenv("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    
     try:
-        await site.start()
-        logger.info(f"Ping server started on port {port} for UptimeRobot")
+        server = HTTPServer(('0.0.0.0', port), PingHandler)
+        logger.info(f"Ping server (thread) started on port {port} for UptimeRobot")
+        server.serve_forever()
     except Exception as e:
-        logger.error(f"Could not start ping server (port in use?): {e}")
+        logger.error(f"Could not start thread ping server: {e}")
+
+threading.Thread(target=run_ping_server, daemon=True).start()
 
 
 # ─── Interactive Callback ─────────────────────────────────────────────────────
@@ -287,8 +290,6 @@ def build_context_header(message: discord.Message) -> str:
 # ─── Events ───────────────────────────────────────────────────────────────────
 @bot.event
 async def on_ready():
-    # Start the HTTP ping server
-    asyncio.create_task(start_ping_server())
 
     # Initialize database & prune old history
     await init_db()
@@ -456,7 +457,12 @@ async def shutdown():
 def handle_sigterm(*args):
     """Handle SIGTERM for graceful shutdown (e.g. Docker, systemd)."""
     logger.info("SIGTERM received")
-    asyncio.create_task(shutdown())
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(shutdown())
+    except RuntimeError:
+        import sys
+        sys.exit(0)
 
 
 signal.signal(signal.SIGTERM, handle_sigterm)
@@ -464,64 +470,42 @@ signal.signal(signal.SIGINT, handle_sigterm)
 
 
 # ─── Start Bot ─────────────────────────────────────────────────────────────────
-async def run_bot():
-    """Run the bot with automatic reconnect on network failures."""
-    token = os.getenv("DISCORD_BOT_TOKEN")
-    if not token:
-        logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
+token = os.getenv("DISCORD_BOT_TOKEN")
+if not token:
+    logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
+    exit(1)
+
+retry_delay = 15
+max_delay = 300
+
+while True:
+    try:
+        bot.run(token)
+        break  # Clean exit (SIGTERM)
+    except discord.LoginFailure:
+        logger.error("Invalid DISCORD_BOT_TOKEN. Exiting.")
         exit(1)
-
-    # Start the ping server once, before the connection loop
-    await start_ping_server()
-
-    retry_delay = 10  # seconds
-    max_delay = 120   # cap backoff at 2 minutes
-
-    # Network errors that should trigger a retry (not a crash)
-    NETWORK_ERRORS = (
+    except discord.errors.HTTPException as e:
+        if e.status == 429:
+            logger.error("⚠️ Rate limited (429)! Sleeping for 15 minutes to avoid Cloudflare IP ban...")
+            time.sleep(900)
+        else:
+            logger.error(f"HTTP Exception during startup: {e}")
+            time.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, max_delay)
+    except (
         aiohttp.ClientConnectorError,
         aiohttp.ServerDisconnectedError,
         aiohttp.ClientOSError,
-        discord.errors.ConnectionClosed,
-        discord.errors.GatewayNotFound,
-    )
-
-    while True:
-        try:
-            logger.info(f"Connecting to Discord... (retry_delay={retry_delay}s)")
-            await bot.start(token)
-        except discord.LoginFailure:
-            logger.error("Invalid DISCORD_BOT_TOKEN. Please check your .env file.")
-            exit(1)
-        except NETWORK_ERRORS as e:
-            logger.warning(
-                f"Network error — discord.com unreachable: {e}\n"
-                f"Retrying in {retry_delay}s..."
-            )
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, max_delay)
-            # Reset the bot client for a clean reconnect
-            if not bot.is_closed():
-                await bot.close()
-            logger.info("Reconnecting...")
-        except Exception as e:
-            error_msg = str(e)
-            # aiohttp raises plain Exception for some SSL/host errors
-            if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower():
-                logger.warning(
-                    f"Network/SSL error — discord.com unreachable: {e}\n"
-                    f"Retrying in {retry_delay}s..."
-                )
-            else:
-                logger.error(f"Unexpected error running bot: {e}", exc_info=True)
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, max_delay)
-            if not bot.is_closed():
-                await bot.close()
-            logger.info("Reconnecting...")
+    ) as e:
+        logger.warning(f"Network error — discord.com unreachable: {e}\nRetrying in {retry_delay}s...")
+        time.sleep(retry_delay)
+        retry_delay = min(retry_delay * 2, max_delay)
+    except Exception as e:
+        error_msg = str(e)
+        if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower():
+            logger.warning(f"Network/SSL error — discord.com unreachable: {e}\nRetrying in {retry_delay}s...")
         else:
-            # Clean exit (e.g. SIGTERM)
-            break
-
-
-asyncio.run(run_bot())
+            logger.error(f"Fatal error running bot: {e}", exc_info=True)
+        time.sleep(retry_delay)
+        retry_delay = min(retry_delay * 2, max_delay)
