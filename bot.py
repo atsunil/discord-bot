@@ -10,6 +10,8 @@ import os
 import signal
 import asyncio
 import logging
+import ssl
+import aiohttp
 from aiohttp import web
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -462,8 +464,64 @@ signal.signal(signal.SIGINT, handle_sigterm)
 
 
 # ─── Start Bot ─────────────────────────────────────────────────────────────────
-token = os.getenv("DISCORD_BOT_TOKEN")
-if not token:
-    logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
-    exit(1)
-bot.run(token)
+async def run_bot():
+    """Run the bot with automatic reconnect on network failures."""
+    token = os.getenv("DISCORD_BOT_TOKEN")
+    if not token:
+        logger.error("DISCORD_BOT_TOKEN is not set in environment variables.")
+        exit(1)
+
+    # Start the ping server once, before the connection loop
+    await start_ping_server()
+
+    retry_delay = 10  # seconds
+    max_delay = 120   # cap backoff at 2 minutes
+
+    # Network errors that should trigger a retry (not a crash)
+    NETWORK_ERRORS = (
+        aiohttp.ClientConnectorError,
+        aiohttp.ServerDisconnectedError,
+        aiohttp.ClientOSError,
+        discord.errors.ConnectionClosed,
+        discord.errors.GatewayNotFound,
+    )
+
+    while True:
+        try:
+            logger.info(f"Connecting to Discord... (retry_delay={retry_delay}s)")
+            await bot.start(token)
+        except discord.LoginFailure:
+            logger.error("Invalid DISCORD_BOT_TOKEN. Please check your .env file.")
+            exit(1)
+        except NETWORK_ERRORS as e:
+            logger.warning(
+                f"Network error — discord.com unreachable: {e}\n"
+                f"Retrying in {retry_delay}s..."
+            )
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, max_delay)
+            # Reset the bot client for a clean reconnect
+            if not bot.is_closed():
+                await bot.close()
+            logger.info("Reconnecting...")
+        except Exception as e:
+            error_msg = str(e)
+            # aiohttp raises plain Exception for some SSL/host errors
+            if "Cannot connect to host" in error_msg or "ssl" in error_msg.lower():
+                logger.warning(
+                    f"Network/SSL error — discord.com unreachable: {e}\n"
+                    f"Retrying in {retry_delay}s..."
+                )
+            else:
+                logger.error(f"Unexpected error running bot: {e}", exc_info=True)
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, max_delay)
+            if not bot.is_closed():
+                await bot.close()
+            logger.info("Reconnecting...")
+        else:
+            # Clean exit (e.g. SIGTERM)
+            break
+
+
+asyncio.run(run_bot())
