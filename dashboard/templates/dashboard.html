@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Your Discord servers</p>
+    <h1>Guild Dashboard</h1>
+  </div>
+</section>
+
+<section class="card-grid">
+  {% for item in items %}
+  <article class="guild-card">
+    <h2>{{ item.guild.name }}</h2>
+    <p class="muted">Plan: {{ item.config.plan_tier|title }}</p>
+    <div class="card-actions">
+      <a class="button button-secondary" href="/dashboard/{{ item.guild.id }}/config">Configure</a>
+      <a class="button button-secondary" href="/dashboard/{{ item.guild.id }}/stats">Stats</a>
+      <a class="button button-primary" href="/dashboard/{{ item.guild.id }}/billing">Billing</a>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

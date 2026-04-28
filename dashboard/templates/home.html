@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Moloj{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">AI moderation, operations, and premium automation for Discord communities</p>
+    <h1>Run your server with a bot that can actually work.</h1>
+    <p class="lede">Moloj combines Discord moderation, guided AI tools, billing, dashboards, reaction roles, music, welcome cards, translation, and premium memory in one deployable stack.</p>
+    <div class="hero-actions">
+      <a class="button button-primary" href="{{ invite_url }}">Add to Discord</a>
+      <a class="button button-secondary" href="/auth/login">Open Dashboard</a>
+    </div>
+  </div>
+  <div class="hero-card">
+    <div class="signal-card">
+      <h2>Built for sale and deployment</h2>
+      <ul>
+        <li>FastAPI dashboard with Discord OAuth2</li>
+        <li>MongoDB-backed guild settings and history</li>
+        <li>Razorpay billing and plan gating</li>
+        <li>NVIDIA NIM chat and image generation</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="pricing-grid">
+  {% for plan_key, plan in plans.items() %}
+  <article class="plan-card">
+    <p class="plan-kicker">{{ plan_key|title }}</p>
+    <h3>{{ plan.name }}</h3>
+    <p class="price">₹{{ "%.0f"|format(plan.price_inr / 100) }}<span>/month</span></p>
+    <p>{{ plan.description }}</p>
+    <ul>
+      {% for feature in plan.features %}
+      <li>{{ feature }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

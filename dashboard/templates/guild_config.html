@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Configure {{ guild.name }}{% endblock %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Configuration</p>
+    <h1>{{ guild.name }}</h1>
+  </div>
+</section>
+
+<form class="panel form-panel" method="post" action="/dashboard/{{ guild.id }}/config">
+  <label>
+    <span>Prefix</span>
+    <input type="text" name="prefix" value="{{ config.prefix }}">
+  </label>
+  <label>
+    <span>Allowed channel IDs</span>
+    <input type="text" name="allowed_channels" value="{{ config.allowed_channels|join(', ') }}" placeholder="12345, 67890">
+  </label>
+  <label>
+    <span>Max purge</span>
+    <input type="number" name="max_purge" value="{{ config.max_purge }}" min="1" max="500">
+  </label>
+  <button class="button button-primary" type="submit">Save Configuration</button>
+</form>
+{% endblock %}

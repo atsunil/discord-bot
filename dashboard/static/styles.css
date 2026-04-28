@@ -1,0 +1,204 @@
+:root {
+  --bg: #111425;
+  --panel: rgba(26, 26, 46, 0.86);
+  --panel-strong: #1a1a2e;
+  --text: #eef2ff;
+  --muted: #aab5d4;
+  --line: rgba(162, 175, 255, 0.16);
+  --accent: #7c3aed;
+  --accent-soft: #3b2a77;
+  --accent-2: #22d3ee;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  --radius: 22px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.25), transparent 32%),
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.18), transparent 24%),
+    linear-gradient(180deg, #0d1020 0%, #13182d 100%);
+}
+
+.site-shell {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 0;
+}
+
+.brand {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.topnav {
+  display: flex;
+  gap: 1rem;
+}
+
+.topnav a,
+.user-pill {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.page {
+  display: grid;
+  gap: 2rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 1.5rem;
+  padding: 2rem 0 1rem;
+}
+
+.hero-copy h1,
+.section-header h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2.2rem, 5vw, 4.2rem);
+  line-height: 0.98;
+}
+
+.hero-copy .lede {
+  max-width: 52rem;
+}
+
+.eyebrow,
+.plan-kicker,
+.metric-label {
+  color: var(--accent-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero-actions,
+.card-actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.button-primary {
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  border-color: transparent;
+}
+
+.button-secondary {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hero-card,
+.panel,
+.guild-card,
+.plan-card,
+.metric-card,
+.signal-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.signal-card,
+.guild-card,
+.plan-card,
+.metric-card,
+.panel {
+  padding: 1.4rem;
+}
+
+.pricing-grid,
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.price {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0.2rem 0 0.8rem;
+}
+
+.price span,
+.muted,
+.plain-list,
+label span {
+  color: var(--muted);
+}
+
+.plain-list,
+.plan-card ul,
+.signal-card ul {
+  padding-left: 1rem;
+}
+
+.form-panel form,
+.form-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+@media (max-width: 840px) {
+  .hero,
+  .pricing-grid,
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+  }
+}

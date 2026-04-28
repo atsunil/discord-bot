@@ -1,0 +1,1 @@
+"""Moloj Discord bot package."""

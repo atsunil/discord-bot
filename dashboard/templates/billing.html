@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Billing {{ guild.name }}{% endblock %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Billing</p>
+    <h1>{{ guild.name }}</h1>
+    <p class="muted">Current plan: {{ config.plan_tier|title }}</p>
+  </div>
+</section>
+
+<section class="pricing-grid">
+  {% for plan_key, plan in plans.items() %}
+  <article class="plan-card">
+    <p class="plan-kicker">{{ plan_key|title }}</p>
+    <h3>{{ plan.name }}</h3>
+    <p class="price">₹{{ "%.0f"|format(plan.price_inr / 100) }}<span>/month</span></p>
+    <p>{{ plan.description }}</p>
+    <ul>
+      {% for feature in plan.features %}
+      <li>{{ feature }}</li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="/dashboard/{{ guild.id }}/create-order">
+      <input type="hidden" name="plan_tier" value="{{ plan_key }}">
+      <button class="button button-primary" type="submit">Create Order</button>
+    </form>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="panel form-panel">
+  <h2>Manual payment verification</h2>
+  <form method="post" action="/dashboard/{{ guild.id }}/verify-payment">
+    <label>
+      <span>Plan tier</span>
+      <input type="text" name="plan_tier" placeholder="pro or premium">
+    </label>
+    <label>
+      <span>Order ID</span>
+      <input type="text" name="order_id">
+    </label>
+    <label>
+      <span>Payment ID</span>
+      <input type="text" name="payment_id">
+    </label>
+    <label>
+      <span>Signature</span>
+      <input type="text" name="signature">
+    </label>
+    <button class="button button-secondary" type="submit">Verify Payment</button>
+  </form>
+</section>
+{% endblock %}

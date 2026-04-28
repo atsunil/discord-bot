@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Stats {{ guild.name }}{% endblock %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Usage overview</p>
+    <h1>{{ guild.name }}</h1>
+  </div>
+</section>
+
+<section class="card-grid">
+  <article class="metric-card">
+    <p class="metric-label">Messages stored</p>
+    <h2>{{ stats.message_count }}</h2>
+  </article>
+  <article class="metric-card">
+    <p class="metric-label">Top channels</p>
+    <ul class="plain-list">
+      {% for row in stats.top_channels %}
+      <li>#{{ row._id }} — {{ row.count }}</li>
+      {% else %}
+      <li>No channel history yet.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}

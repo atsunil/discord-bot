@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Moloj Dashboard{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="/">Moloj</a>
+      <nav class="topnav">
+        <a href="/">Home</a>
+        {% if user %}
+        <a href="/dashboard">Dashboard</a>
+        <a href="/auth/logout">Logout</a>
+        {% else %}
+        <a href="/auth/login">Login</a>
+        {% endif %}
+      </nav>
+      {% if user %}
+      <div class="user-pill">
+        <span>{{ user.username }}</span>
+      </div>
+      {% endif %}
+    </header>
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>
